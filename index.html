@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Custom Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Source Code Pro', monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #console-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        #input-container {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+        }
+
+        #prompt {
+            margin-right: 10px;
+            color: #0f0;
+        }
+
+        #command-input {
+            flex: 1;
+            background-color: transparent;
+            border: none;
+            color: #fff;
+            font-family: 'Source Code Pro', monospace;
+            font-size: 16px;
+            outline: none;
+        }
+
+        #command-input:focus {
+            outline: none;
+        }
+
+        .console-message {
+            margin-bottom: 5px;
+        }
+
+        .error-message {
+            color: #f00;
+        }
+
+        .help-message {
+            color: #0ff;
+        }
+        .prompt-message{
+            color: #FFFF00;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="console-container"></div>
+    <div id="input-container">
+        <span id="prompt">C:\></span>
+        <input type="text" id="command-input">
+    </div>
+
+    <script>
+        const consoleContainer = document.getElementById('console-container');
+        const commandInput = document.getElementById('command-input');
+        const prompt = document.getElementById('prompt');
+
+        // Function to display messages in the console
+        function displayMessage(message, type = 'console') {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('console-message');
+            if (type === 'error') {
+                messageElement.classList.add('error-message');
+            } else if (type === 'help') {
+                messageElement.classList.add('help-message');
+            } else if (type === 'prompt') {
+                messageElement.classList.add('prompt-message');
+            }
+            messageElement.textContent = message;
+            consoleContainer.appendChild(messageElement);
+            consoleContainer.scrollTop = consoleContainer.scrollHeight; // Auto-scroll to bottom
+        }
+
+        let commandHistory = [];
+        let historyIndex = -1;
+        let devMode = false; // Initially, dev mode is off
+        let pendingConfirmation = null; // To store pending confirmation
+        let confirmationCommand = '';
+
+        // Function to load command history from localStorage
+        function loadCommandHistory() {
+            const savedData = localStorage.getItem('consoleData');
+            if (savedData) {
+                try {
+                    const consoleData = JSON.parse(savedData);
+                    commandHistory = consoleData.commandHistory || [];
+                    if (!Array.isArray(commandHistory)) {
+                        commandHistory = [];
+                    }
+                    devMode = consoleData.devMode || false; // Load devMode state
+                } catch (e) {
+                    console.error('Error parsing console data:', e);
+                    commandHistory = [];
+                    localStorage.removeItem('consoleData');
+                }
+            } else {
+                commandHistory = [];
+            }
+            historyIndex = commandHistory.length;
+        }
+
+        // Function to save command history to localStorage
+        function saveCommandHistory() {
+            try {
+                let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                consoleData.commandHistory = commandHistory.slice(-10); // Save only the last 10
+                consoleData.devMode = devMode; // Save devMode state
+                localStorage.setItem('consoleData', JSON.stringify(consoleData));
+            } catch (e) {
+                console.error('Error saving console data:', e);
+            }
+        }
+
+        // Define available commands and their actions
+        const commands = {
+            help: {
+                description: 'Displays all available commands',
+                action: () => {
+                    displayMessage('Available Commands:', 'help');
+                    const commandNames = Object.keys(commands);
+                    const displayOrder = ['echo', 'clear', 'cal', 'timer', 'store', 'ret', 'del', 'list', 'prompt', 'exit']; // Define the order of commands.
+                    if (devMode) {
+                        displayOrder.push('dev', 'hide', 'unhide', 'install', 'uninstall'); //push dev mode commands
+                    } else {
+                        displayOrder.push('dev');
+                    }
+
+                    displayOrder.forEach(commandName => {
+                        if (commands[commandName]) {
+                            displayMessage(`  ${commandName}: ${commands[commandName].description}`, 'help');
+                        }
+                    });
+                    // Display installed commands
+                    const storedData = localStorage.getItem('consoleData');
+                    if (storedData) {
+                        try{
+                            const consoleData = JSON.parse(storedData);
+                            const installedCommands = consoleData.installedCommands || {};
+                            for (const cmdName in installedCommands) {
+                                if (installedCommands.hasOwnProperty(cmdName)) {
+                                     displayMessage(`  ${cmdName}: ${installedCommands[cmdName].description}`, 'help');
+                                }
+                            }
+                        } catch(e){
+                             console.error('Error parsing console data:', e);
+                        }
+                    }
+                }
+            },
+            echo: {
+                description: 'Displays the text you enter',
+                action: (args) => {
+                    if (args.length > 0) {
+                        displayMessage(args.join(' '));
+                    } else {
+                        displayMessage('Please provide text to echo.');
+                    }
+                }
+            },
+            clear: {
+                description: 'Clears the console',
+                action: () => {
+                    consoleContainer.innerHTML = '';
+                }
+            },
+            cal: {
+                description: 'Performs a calculation',
+                action: (args) => {
+                    if (args.length === 3) {
+                        const num1 = parseFloat(args[0]);
+                        const operator = args[1];
+                        const num2 = parseFloat(args[2]);
+
+                        if (isNaN(num1) || isNaN(num2)) {
+                            displayMessage('Invalid numbers. Please provide valid numeric values.', 'error');
+                            return;
+                        }
+
+                        let result;
+                        switch (operator) {
+                            case '+':
+                                result = num1 + num2;
+                                break;
+                            case '-':
+                                result = num1 - num2;
+                                break;
+                            case '*':
+                                result = num1 * num2;
+                                break;
+                            case '/':
+                                if (num2 === 0) {
+                                    displayMessage('Cannot divide by zero.', 'error');
+                                    return;
+                                }
+                                result = num1 / num2;
+                                break;
+                            case '%':
+                                result = num1 % num2;
+                                break;
+                            case '^':
+                                result = Math.pow(num1, num2);
+                                break;
+                            default:
+                                displayMessage('Invalid operator.  Use +, -, *, /, %, or ^.', 'error');
+                                return;
+                        }
+                        displayMessage(`${num1} ${operator} ${num2} = ${result}`);
+                    } else {
+                        displayMessage('Usage: cal <number> <operator> <number>', 'error');
+                    }
+                }
+            },
+            timer: {
+                description: 'Starts a timer for a specified number of seconds',
+                action: (args) => {
+                    if (args.length === 1) {
+                        const seconds = parseInt(args[0]);
+                        if (isNaN(seconds) || seconds <= 0) {
+                            displayMessage('Invalid time. Please enter a positive number of seconds.', 'error');
+                            return;
+                        }
+
+                        displayMessage(`Timer started for ${seconds} seconds...`);
+                        let remaining = seconds;
+                        const intervalId = setInterval(() => {
+                            displayMessage(`${remaining} seconds remaining...`);
+                            remaining--;
+                            if (remaining < 0) {
+                                clearInterval(intervalId);
+                                displayMessage('Time is up!');
+                            }
+                        }, 1000);
+                    } else {
+                        displayMessage('Usage: timer <seconds>', 'error');
+                    }
+                }
+            },
+            store: {
+                description: 'Stores a value with a key',
+                action: (args) => {
+                    if (args.length === 2) {
+                        const key = args[0];
+                        const value = args[1];
+                        try {
+                            // Use a single key 'consoleData' to store an object of key-value pairs
+                            let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                            consoleData.stored = consoleData.stored || {};  // create nested object if it does not exist
+                            consoleData.stored[key] = value;
+                            localStorage.setItem('consoleData', JSON.stringify(consoleData));
+                            displayMessage(`Stored "${value}" with key "${key}".`);
+                        } catch (error) {
+                            displayMessage(`Failed to store: ${error.message}`, 'error');
+                        }
+                    } else {
+                        displayMessage('Usage: store <key> <value>', 'error');
+                    }
+                }
+            },
+            ret: {
+                description: 'Retrieves a value using its key',
+                action: (args) => {
+                    if (args.length === 1) {
+                        const key = args[0];
+                        try {
+                            const consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                            const storedData = consoleData.stored || {};
+                            const value = storedData[key]; // Directly access the value from the object
+                            if (value !== undefined) {
+                                displayMessage(`Value for "${key}": ${value}`);
+                            } else {
+                                displayMessage(`Key "${key}" not found.`, 'error');
+                            }
+                        } catch (error) {
+                            displayMessage(`Failed to retrieve: ${error.message}`, 'error');
+                        }
+                    } else {
+                        displayMessage('Usage: ret <key>', 'error');
+                    }
+                }
+            },
+            del: {
+                description: 'Deletes a key-value pair',
+                action: (args) => {
+                    if (args.length === 1) {
+                        const key = args[0];
+                        try {
+                            let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                             const storedData = consoleData.stored || {};
+                            if (storedData[key] !== undefined) {
+                                delete storedData[key]; // Remove the key-value pair from the object
+                                consoleData.stored = storedData;
+                                localStorage.setItem('consoleData', JSON.stringify(consoleData)); // Save the updated object
+                                displayMessage(`Deleted key "${key}".`);
+                            } else {
+                                displayMessage(`Key "${key}" not found.`, 'error');
+                            }
+                        } catch (error) {
+                            displayMessage(`Failed to delete: ${error.message}`, 'error');
+                        }
+                    } else {
+                        displayMessage('Usage: del <key>', 'error');
+                    }
+                }
+            },
+            list: {
+                description: 'Lists all stored keys',
+                action: () => {
+                    try {
+                        const consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                        const storedData = consoleData.stored || {};
+                        const keys = Object.keys(storedData); // Get an array of keys
+                        if (keys.length === 0) {
+                            displayMessage('No items stored.');
+                        } else {
+                            displayMessage('Stored Keys:');
+                            keys.forEach(key => {
+                                displayMessage(`  ${key}`);
+                            });
+                        }
+                    } catch (error) {
+                        displayMessage(`Failed to list keys: ${error.message}`, 'error');
+                    }
+                }
+            },
+            prompt: {
+                description: 'Changes the console prompt',
+                action: (args) => {
+                    if (args.length > 0) {
+                        const newPrompt = args.join(' ');
+                        prompt.textContent = `${newPrompt}>`;
+                        let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                        consoleData.promptColor = newPrompt;
+                        localStorage.setItem('consoleData', JSON.stringify(consoleData)); //save prompt color
+                        displayMessage(`Prompt changed to "${newPrompt}>"`);
+                    } else {
+                        displayMessage('Usage: prompt <new prompt>', 'error');
+                    }
+                }
+            },
+            exit: {
+                description: 'Closes the console',
+                action: () => {
+                    displayMessage('Exiting console...');
+                    // In a real application, you might want to close the window or perform other cleanup
+                }
+            },
+            dev: {
+                description: 'Enables or disables developer mode',
+                action: (args) => {
+                    if (args.length === 0) { // Modified condition
+                        pendingConfirmation = {
+                            command: 'dev',
+                        };
+                        confirmationCommand = 'dev';
+                        displayMessage(`Are you sure you want to ${devMode ? 'disable' : 'enable'} developer mode? (y/n)`, 'prompt');
+                    }
+                    else if (args.length === 1) {
+                        const mode = args[0].toLowerCase();
+                        if (mode === 'enable' || mode === 'disable') {
+                            pendingConfirmation = {
+                                command: 'dev',
+                                mode: mode,
+                            };
+                            confirmationCommand = 'dev';
+                            displayMessage(`Are you sure you want to ${mode} developer mode? (y/n)`, 'prompt');
+                        } else {
+                            displayMessage('Usage: dev <enable | disable>', 'error');
+                        }
+                    }
+                     else {
+                        displayMessage('Usage: dev <enable | disable>', 'error');
+                    }
+                }
+            },
+            // Developer commands (hidden unless devMode is true)
+            install: {
+                description: 'Installs a new command by providing its name and code',
+                action: (args) => {
+                    if (devMode) { // Check for devMode
+                        if (args.length >= 2) {
+                            const newCommandName = args[0].toLowerCase();
+                            const commandCode = args.slice(1).join(' ');
+
+                            // Basic safety check (important for dynamic code execution):
+                            if (newCommandName in commands) {
+                                displayMessage(`Command "${newCommandName}" already exists.  Installation failed.`, 'error');
+                                return;
+                            }
+
+                            // Use a try-catch block to handle potential errors in the provided code
+                            try {
+                                // eslint-disable-next-line no-eval
+                                const newCommandAction = eval(`(function(args) { ${commandCode} })`);
+                                const newCommand = {
+                                    description: `Dynamically installed command: ${newCommandName}`,
+                                    action: newCommandAction,
+                                };
+                                commands[newCommandName] = newCommand;
+
+                                // Store the command in localStorage
+                                let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                                consoleData.installedCommands = consoleData.installedCommands || {};
+                                consoleData.installedCommands[newCommandName] = {
+                                    code: commandCode,
+                                    description: newCommand.description, // Include the description for persistence
+                                };
+                                localStorage.setItem('consoleData', JSON.stringify(consoleData));
+
+                                displayMessage(`Command "${newCommandName}" installed successfully!`, 'help');
+                            } catch (error) {
+                                displayMessage(`Error installing command "${newCommandName}": ${error}`, 'error');
+                                return; // Stop if there's an error in the code
+                            }
+                        } else {
+                            displayMessage('Usage: install <command name> <code>', 'error');
+                        }
+                    } else {
+                        displayMessage(`Command "${args[0]}" is only available in developer mode.`, 'error');
+                    }
+                },
+            },
+            uninstall: {
+                description: 'Uninstalls a command, removing it from the available commands',
+                action: (args) => {
+                    if (devMode) { // Check for devMode
+                        if (args.length === 1) {
+                            const commandName = args[0].toLowerCase();
+                            if (commands[commandName]) {
+                                delete commands[commandName];
+
+                                // Remove from localStorage
+                                let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                                let installedCommands = consoleData.installedCommands || {};
+                                delete installedCommands[commandName];
+                                consoleData.installedCommands = installedCommands;
+                                localStorage.setItem('consoleData', JSON.stringify(consoleData));
+
+                                displayMessage(`Command "${commandName}" uninstalled.`, 'help');
+                            } else {
+                                displayMessage(`Command "${commandName}" not found.`, 'error');
+                            }
+                        } else {
+                            displayMessage('Usage: uninstall <command name>', 'error');
+                        }
+                    } else {
+                        displayMessage(`Command "${args[0]}" is only available in developer mode.`, 'error');
+                    }
+                },
+            },
+            hide: {
+                description: 'Hides a stored value using its key',
+                action: (args) => {
+                    if (devMode) { // Check for devMode
+                        if (args.length === 1) {
+                            const key = args[0];
+                            try {
+                                let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                                const storedData = consoleData.stored || {};
+                                let hiddenData = consoleData.hidden || {};
+
+                                if (storedData[key] !== undefined) {
+                                    hiddenData[key] = storedData[key];  // Copy to hidden
+                                    delete storedData[key];        // Remove from visible
+                                    consoleData.stored = storedData;
+                                    consoleData.hidden = hiddenData;
+                                    localStorage.setItem('consoleData', JSON.stringify(consoleData));
+                                    displayMessage(`Hidden value with key "${key}".`);
+                                } else {
+                                    displayMessage(`Key "${key}" not found.`, 'error');
+                                }
+                            } catch (error) {
+                                displayMessage(`Failed to hide: ${error.message}`, 'error');
+                            }
+                        } else {
+                            displayMessage('Usage: hide <key>', 'error');
+                        }
+                    } else {
+                         displayMessage(`Command "${args[0]}" is only available in developer mode.`, 'error');
+                    }
+                },
+            },
+            unhide: {
+                description: 'Unhides a stored value using its key',
+                action: (args) => {
+                    if (devMode) { // Check for devMode
+                        if (args.length === 1) {
+                            const key = args[0];
+                            try {
+                                let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                                let storedData = consoleData.stored || {};
+                                let hiddenData = consoleData.hidden || {};
+
+                                if (hiddenData[key] !== undefined) {
+                                    storedData[key] = hiddenData[key];    // Copy back to visible
+                                    delete hiddenData[key];          // Remove from hidden
+                                    consoleData.stored = storedData;
+                                    consoleData.hidden = hiddenData;
+                                    localStorage.setItem('consoleData', JSON.stringify(consoleData));
+                                    displayMessage(`Unhidden value with key "${key}".`);
+                                } else {
+                                    displayMessage(`Key "${key}" not found in hidden storage.`, 'error');
+                                }
+                            } catch (error) {
+                                displayMessage(`Failed to unhide: ${error.message}`, 'error');
+                            }
+                        } else {
+                            displayMessage('Usage: unhide <key>', 'error');
+                        }
+                    } else {
+                        displayMessage(`Command "${args[0]}" is only available in developer mode.`, 'error');
+                    }
+                },
+            },
+            y: {
+                description: 'Confirms a pending action (internal command)',
+                action: () => {
+                    if (pendingConfirmation) {
+                        if (pendingConfirmation.command === 'dev') {
+                            devMode = !devMode;
+                            displayMessage(`Developer mode ${devMode ? 'enabled' : 'disabled'}.`);
+                             // Save the devMode state
+                            let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                            consoleData.devMode = devMode;
+                            localStorage.setItem('consoleData', JSON.stringify(consoleData));
+                        }
+                        pendingConfirmation = null; // Clear
+                        confirmationCommand = '';
+                    } else {
+                        displayMessage('No pending action to confirm.', 'error');
+                    }
+                },
+            },
+            n: {
+                description: 'Cancels a pending action (internal command)',
+                action: () => {
+                    if (pendingConfirmation) {
+                        displayMessage('Action cancelled.');
+                        pendingConfirmation = null; // Clear
+                        confirmationCommand = '';
+                    } else {
+                        displayMessage('No pending action to cancel.', 'error');
+                    }
+                },
+            },
+        };
+
+
+
+        // Load data from localStorage on page load
+        window.addEventListener('load', () => {
+            loadCommandHistory();
+
+            const savedData = localStorage.getItem('consoleData');
+            if (savedData) {
+                try {
+                    const consoleData = JSON.parse(savedData);
+                    const storedCommands = consoleData.installedCommands || {};
+                    const savedPromptColor = consoleData.promptColor;
+                    devMode = consoleData.devMode || false;
+
+                    for (const commandName in storedCommands) {
+                        if (!commands[commandName]) { // Check if it already exists
+                            try {
+                                const storedCommand = storedCommands[commandName];
+                                // eslint-disable-next-line no-eval
+                                const newCommandAction = eval(`(function(args) { ${storedCommand.code} })`);
+                                commands[commandName] = {
+                                    description: storedCommand.description,
+                                    action: newCommandAction,
+                                };
+                                displayMessage(`Command "${commandName}" loaded from storage.`, 'help');
+                            } catch (error) {
+                                displayMessage(`Error loading command "${commandName}" from storage: ${error}`, 'error');
+                                // Optionally remove the invalid command from storage
+                                let consoleData = JSON.parse(localStorage.getItem('consoleData')) || {};
+                                delete consoleData.installedCommands[commandName];
+                                localStorage.setItem('consoleData', JSON.stringify(consoleData));
+                            }
+                        }
+                    }
+                    if (savedPromptColor) {
+                        prompt.style.color = savedPromptColor;
+                        prompt.textContent = `${savedPromptColor}>`;
+                    }
+                } catch (error) {
+                    console.error('Error parsing console data:', error);
+                    localStorage.removeItem('consoleData'); // Clear potentially corrupted data
+                }
+            }
+        });
+
+        // Event listener for the command input
+        commandInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                const input = commandInput.value.trim();
+                const parts = input.split(' ');
+                const commandName = parts[0].toLowerCase();
+                const args = parts.slice(1);
+
+                displayMessage(`${prompt.textContent} ${input}`); // Show user input
+                commandInput.value = ''; // Clear the input
+
+                if (pendingConfirmation) {
+                    // Handle confirmation (yes/no)
+                    if (commandName === 'y' || commandName === 'n') {
+                        commands[commandName].action(); // Call the action for 'yes' or 'no'
+                    }
+                    else{
+                        displayMessage(`Awaiting confirmation (y/n) for command "${confirmationCommand}".`, 'error');
+                    }
+                }
+                else if (commands[commandName]) {
+                    commands[commandName].action(args);
+                } else if (commandName) {
+                    displayMessage(`Command "${commandName}" not found. Type "help" for a list of commands.`, 'error');
+                }
+
+                // Add to history, but not if it's a duplicate ofthe last command
+                if (commandHistory.length === 0 || input !== commandHistory[commandHistory.length - 1]) {
+                    commandHistory.push(input);
+                    saveCommandHistory(); // Save history to localStorage
+                }
+                historyIndex = commandHistory.length; // Reset index to the end
+
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault(); // Prevent cursor from moving
+
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    commandInput.value = commandHistory[historyIndex];
+                } else if (historyIndex === 0) {
+                    commandInput.value = commandHistory[historyIndex];
+                }
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    commandInput.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = commandHistory.length;
+                    commandInput.value = '';
+                }
+            }
+        });
+
+        // Initial message on console load
+        displayMessage('Welcome to the Custom Console!');
+        displayMessage('Type "help" to see available commands.');
+
+        commandInput.focus(); // Focus on the input field for immediate typing
+    </script>
+</body>
+</html>
