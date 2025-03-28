@@ -44,6 +44,9 @@ install: Installs a new command by providing its name and code
 uninstall: Uninstalls a command, removing it from the available commands
 ```
 
+## Showcase
+![image](https://github.com/user-attachments/assets/ab6adc21-f865-4d04-8619-6618f5a0ca08)
+
 
 ## What I learned
 
