@@ -10,42 +10,28 @@
 First install/download the project
 1.  Download the files.
 2.  Open `index.html` in your web browser.
+3.  Open the app.
 
-Available Commands:
+### Available Commands:
 ```bash
 echo: Displays the text you enter
-
 clear: Clears the console
-
 cal: Performs a calculation
-
 timer: Starts a timer for a specified number of seconds
-
 store: Stores a value with a key
-
 ret: Retrieves a value using its key
-
 del: Deletes a key-value pair
-
 list: Lists all stored keys
-
 prompt: Changes the console prompt
-
 exit: Closes the console
-
+size: Sets the font size
 dev: Enables or disables developer mode
-
-hide: Hides a stored value using its key
-
-unhide: Unhides a stored value using its key
-
-install: Installs a new command by providing its name and code
-
-uninstall: Uninstalls a command, removing it from the available commands
+- hide: Hides a stored value using its key
+- unhide: Unhides a stored value using its key
+- install: Installs a new command by providing its name and code
+- uninstall: Uninstalls a command, removing it from the available commands
 ```
 
-## Showcase
-![image](https://github.com/user-attachments/assets/ab6adc21-f865-4d04-8619-6618f5a0ca08)
 
 
 ## What I learned
