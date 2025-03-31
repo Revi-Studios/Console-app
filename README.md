@@ -50,5 +50,4 @@ Gemini 2.0 flash with canvas
 
 
 ## Author
-- wafflepotato7
-- revi studio's owner
+- waffleDev732
