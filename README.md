@@ -46,8 +46,10 @@ I don't plan on updating this project a lot since it has commands to install cus
 
 ## Credits
 
+Tauri (v2)
 Gemini 2.0 flash with canvas
 
 
 ## Author
 - waffleDev732
+- dungeon_master6904
