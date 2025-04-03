@@ -51,3 +51,4 @@ Gemini 2.0 flash with canvas
 
 ## Author
 - waffleDev732
+- dungeon_master6904
