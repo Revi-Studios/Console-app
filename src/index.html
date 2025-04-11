@@ -5,69 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Custom Console</title>
     <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            background-color: #000;
-            color: #fff;
-            font-family: 'Source Code Pro', monospace;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        #console-container {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            word-wrap: break-word;
-            line-height: 1.5;
-            font-size: 16px; /* Default font size */
-        }
-
-        #input-container {
-            display: flex;
-            align-items: center;
-            padding: 10px 20px;
-            border-top: 0px solid #333;
-        }
-
-        #prompt {
-            margin-right: 10px;
-            color: #0f0;
-            font-size: 16px; /* Default font size */
-        }
-
-        #command-input {
-            flex: 1;
-            background-color: transparent;
-            border: none;
-            color: #fff;
-            font-family: 'Source Code Pro', monospace;
-            font-size: 16px; /* Default font size */
-            outline: none;
-        }
-
-        #command-input:focus {
-            outline: none;
-        }
-
-        .console-message {
-            margin-bottom: 5px;
-        }
-
-        .error-message {
-            color: #f00;
-        }
-
-        .help-message {
-            color: #0ff;
-        }
-        .prompt-message{
-            color: #FFFF00;
-        }
-
-    </style>
+    <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
     <div id="console-container"></div>
