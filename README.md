@@ -43,6 +43,9 @@ I have learned more javascript. I have also used Gemini 2.0 Flash with it's Canv
 
 I don't plan on updating this project a lot since it has commands to install custom commands. The project was fun to develop and I hope people will like our work.
 
+## Showcase
+<img id="showcase" width="465" alt="Screenshot 2025-04-20 at 20 05 25" src="https://github.com/user-attachments/assets/a76bebab-f75b-4f58-91f9-d5037797bc47" />
+
 
 ## Credits
 
