@@ -2,18 +2,24 @@
 
 ## Custom terminal build with javascript
 
- The Console project was developed by the organization "Revi Studios". It functions like a custom terminal with commands like "store", "install" and "cal"
+ This project was developed by Revi Studios. It's a custom terminal with commands like *store*, *install* and *cal*.
 
  
 ## How to use it
 
-First install/download the project
-1.  Download the files.
-2.  Open `index.html` in your web browser.
-3.  Open the app.
+> [!NOTE]
+> You can visit the [Web Version](https://revi-studios.github.io/Console-app/),  
+> if you just want to play around with it :)
+
+To install the app:
+1.  Find the right [release](https://github.com/Revi-Studios/Console-app/releases)
+2.  Follow the instructions in the release description
+
+> [!Warning]
+> If you're on MacOs, it is a bit trickier to install the app ([structions](readme_files/mac-v1.0/README.md))
 
 ### Available Commands:
-```bash
+```
 echo: Displays the text you enter
 clear: Clears the console
 cal: Performs a calculation
